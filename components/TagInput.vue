@@ -16,6 +16,14 @@ const filtered = computed(() => {
     .slice(0, 6)
 })
 
+// mais usadas (a API já retorna ordenado por contagem), fora as já escolhidas
+const quickPicks = computed(() => {
+  const chosen = new Set(props.modelValue.map(t => t.toLowerCase()))
+  return (props.suggestions ?? [])
+    .filter(s => !chosen.has(s.toLowerCase()))
+    .slice(0, 16)
+})
+
 function add(tag: string) {
   const clean = tag.trim()
   if (!clean) return
@@ -67,6 +75,21 @@ function onKeydown(e: KeyboardEvent) {
       >
         {{ s }}
       </button>
+    </div>
+
+    <div v-else-if="quickPicks.length" class="tags__quick">
+      <span class="tags__quick-label mono">mais usadas — clique pra adicionar</span>
+      <div class="tags__suggestions">
+        <button
+          v-for="s in quickPicks"
+          :key="s"
+          type="button"
+          class="tags__suggestion mono"
+          @mousedown.prevent="add(s)"
+        >
+          + {{ s }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -123,6 +146,17 @@ function onKeydown(e: KeyboardEvent) {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+
+.tags__quick {
+  margin-top: 12px;
+}
+
+.tags__quick-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .tags__suggestion {

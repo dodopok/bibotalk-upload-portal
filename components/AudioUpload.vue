@@ -7,13 +7,19 @@ export interface EnclosureValue {
 }
 
 const props = defineProps<{ modelValue: EnclosureValue | null }>()
-const emit = defineEmits<{ 'update:modelValue': [value: EnclosureValue | null] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: EnclosureValue | null]
+  /** true enquanto envia/processa — o form bloqueia o salvar */
+  'busy': [busy: boolean]
+}>()
 
 const inputRef = ref<HTMLInputElement>()
 const dragging = ref(false)
 const uploading = ref(false)
 const progress = ref(0)
 const error = ref<string | null>(null)
+
+watch(uploading, b => emit('busy', b))
 
 async function upload(file: File) {
   if (!file.name.toLowerCase().endsWith('.mp3')) {
@@ -75,10 +81,10 @@ function updateDuration(e: Event) {
     >
       <template v-if="uploading">
         <div class="drop__bar">
-          <div class="drop__fill" :style="{ width: progress + '%' }" />
+          <div class="drop__fill" :class="{ 'drop__fill--processing': progress === 100 }" :style="{ width: progress + '%' }" />
         </div>
-        <p class="drop__status mono">Subindo pro FTP… {{ progress }}%</p>
-        <p v-if="progress === 100" class="drop__status mono">Processando e calculando duração…</p>
+        <p v-if="progress < 100" class="drop__status mono">Enviando… {{ progress }}%</p>
+        <p v-else class="drop__status mono">Processando: gravando no FTP e calculando duração…</p>
       </template>
       <template v-else>
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="drop__icon" aria-hidden="true">
@@ -175,6 +181,14 @@ function updateDuration(e: Event) {
   border-radius: 999px;
   background: linear-gradient(90deg, var(--rec), var(--amber));
   transition: width 0.2s ease;
+}
+
+.drop__fill--processing {
+  animation: pulse-fill 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-fill {
+  50% { opacity: 0.45; }
 }
 
 .drop__status {

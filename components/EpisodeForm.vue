@@ -31,9 +31,18 @@ const form = computed({
   set: v => emit('update:modelValue', v)
 })
 
-function patch<K extends keyof EpisodeFormModel>(key: K, value: EpisodeFormModel[K]) {
-  emit('update:modelValue', { ...props.modelValue, [key]: value })
+// Patch por objeto: dois eventos no mesmo tick não se sobrescrevem
+// (props.modelValue fica desatualizado entre emissões síncronas)
+function patch(partial: Partial<EpisodeFormModel>) {
+  emit('update:modelValue', { ...props.modelValue, ...partial })
 }
+
+// uploads em andamento bloqueiam o salvar
+const busyCount = ref(0)
+function onBusy(busy: boolean) {
+  busyCount.value = Math.max(0, busyCount.value + (busy ? 1 : -1))
+}
+const uploadsBusy = computed(() => busyCount.value > 0)
 
 const { data: taxonomies } = await useFetch('/api/taxonomies', { lazy: true })
 
@@ -58,15 +67,18 @@ function toLocalInputValue(d: Date) {
 
 function toggleCategory(id: number) {
   const has = form.value.categories.includes(id)
-  patch('categories', has
-    ? form.value.categories.filter(c => c !== id)
-    : [...form.value.categories, id])
+  patch({
+    categories: has
+      ? form.value.categories.filter(c => c !== id)
+      : [...form.value.categories, id]
+  })
 }
 
 const canSubmit = computed(() =>
   form.value.title.trim().length > 0 &&
   form.value.categories.length > 0 &&
-  !props.saving
+  !props.saving &&
+  !uploadsBusy.value
 )
 </script>
 
@@ -82,7 +94,7 @@ const canSubmit = computed(() =>
           type="text"
           placeholder="BTCast 000 — Nome do episódio"
           required
-          @input="patch('title', ($event.target as HTMLInputElement).value)"
+          @input="patch({ title: ($event.target as HTMLInputElement).value })"
         >
 
         <label class="label ef__gap" for="ep-desc">Descrição</label>
@@ -92,14 +104,15 @@ const canSubmit = computed(() =>
           :value="form.content"
           rows="10"
           placeholder="Descrição do episódio. Pode colar texto com URLs soltas — elas viram links clicáveis automaticamente ao salvar."
-          @input="patch('content', ($event.target as HTMLTextAreaElement).value)"
+          @input="patch({ content: ($event.target as HTMLTextAreaElement).value })"
         />
       </section>
 
       <section class="ef__card rise" style="animation-delay: 0.05s">
         <AudioUpload
           :model-value="form.enclosure"
-          @update:model-value="patch('enclosure', $event)"
+          @update:model-value="patch({ enclosure: $event })"
+          @busy="onBusy"
         />
       </section>
 
@@ -108,14 +121,17 @@ const canSubmit = computed(() =>
           :model-value="form.featuredImage"
           label="Featured image (post)"
           hint="Imagem destacada do post no site."
-          @update:model-value="patch('featuredImage', $event); !$event && patch('featuredMediaId', null)"
-          @uploaded="patch('featuredMediaId', $event.id)"
+          @update:model-value="$event === null && patch({ featuredImage: null, featuredMediaId: null })"
+          @uploaded="patch({ featuredImage: $event.url, featuredMediaId: $event.id })"
+          @busy="onBusy"
         />
         <ImageUpload
           :model-value="form.artworkUrl"
           label="Artwork do episódio (PowerPress)"
           hint="Capa que aparece no Spotify/players. Quadrada, mínimo 1400×1400."
-          @update:model-value="patch('artworkUrl', $event)"
+          @update:model-value="$event === null && patch({ artworkUrl: null })"
+          @uploaded="patch({ artworkUrl: $event.url })"
+          @busy="onBusy"
         />
       </section>
 
@@ -124,7 +140,7 @@ const canSubmit = computed(() =>
         <TagInput
           :model-value="form.tagNames"
           :suggestions="taxonomies?.tagSuggestions ?? []"
-          @update:model-value="patch('tagNames', $event)"
+          @update:model-value="patch({ tagNames: $event })"
         />
       </section>
     </div>
@@ -146,7 +162,7 @@ const canSubmit = computed(() =>
             type="datetime-local"
             :value="form.date"
             required
-            @input="patch('date', ($event.target as HTMLInputElement).value)"
+            @input="patch({ date: ($event.target as HTMLInputElement).value })"
           >
         </template>
       </section>
@@ -181,7 +197,7 @@ const canSubmit = computed(() =>
           <input
             type="checkbox"
             :checked="form.videoPending"
-            @change="patch('videoPending', ($event.target as HTMLInputElement).checked)"
+            @change="patch({ videoPending: ($event.target as HTMLInputElement).checked })"
           >
           <span>Vídeo pendente no Spotify</span>
         </label>
@@ -191,8 +207,8 @@ const canSubmit = computed(() =>
       </section>
 
       <button class="btn btn--rec ef__submit" type="submit" :disabled="!canSubmit">
-        <span v-if="saving" class="ef__spinner" aria-hidden="true" />
-        {{ saving ? 'Salvando…' : submitLabel }}
+        <span v-if="saving || uploadsBusy" class="ef__spinner" aria-hidden="true" />
+        {{ saving ? 'Salvando…' : uploadsBusy ? 'Aguarde os uploads…' : submitLabel }}
       </button>
     </aside>
   </form>

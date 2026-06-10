@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import type { EpisodeFormModel } from '~/components/EpisodeForm.vue'
 
+// tags presentes em praticamente todo episódio
+const DEFAULT_TAGS = [
+  'Bíblia', 'bibotalk', 'BTCast', 'Deus', 'Devocional', 'Espiritualidade',
+  'Igreja', 'jesus cristo', 'Podcast', 'podcast cristão', 'podcast de teologia',
+  'rodrigo bibo', 'teologia', 'teologia bíblica', 'teologia em áudio', 'Vida Cristã'
+]
+
 const form = ref<EpisodeFormModel>({
   title: '',
   content: '',
   status: 'draft',
   date: '',
   categories: [],
-  tagNames: [],
+  tagNames: [...DEFAULT_TAGS],
   featuredMediaId: null,
   featuredImage: null,
   enclosure: null,

@@ -10,12 +10,16 @@ const emit = defineEmits<{
   'update:modelValue': [url: string | null]
   /** id do attachment no WP, quando aplicável */
   'uploaded': [media: { id: number, url: string, thumbnail: string }]
+  /** true enquanto envia/processa — o form bloqueia o salvar */
+  'busy': [busy: boolean]
 }>()
 
 const inputRef = ref<HTMLInputElement>()
 const uploading = ref(false)
 const progress = ref(0)
 const error = ref<string | null>(null)
+
+watch(uploading, b => emit('busy', b))
 
 async function onPick(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
@@ -29,7 +33,6 @@ async function onPick(e: Event) {
       file,
       p => (progress.value = p)
     )
-    emit('update:modelValue', media.url)
     emit('uploaded', media)
   } catch (e: unknown) {
     error.value = (e as Error).message
@@ -38,10 +41,6 @@ async function onPick(e: Event) {
     if (inputRef.value) inputRef.value.value = ''
   }
 }
-
-function clearImage() {
-  emit('update:modelValue', null)
-}
 </script>
 
 <template>
@@ -49,15 +48,18 @@ function clearImage() {
     <span class="label">{{ label }}</span>
 
     <div class="imgup__box" :class="{ 'imgup__box--filled': modelValue }">
-      <img v-if="modelValue" :src="modelValue" alt="" class="imgup__preview">
+      <img v-if="modelValue && !uploading" :src="modelValue" alt="" class="imgup__preview">
 
-      <div v-if="uploading" class="imgup__progress mono">{{ progress }}%</div>
+      <div v-if="uploading" class="imgup__progress mono">
+        <span v-if="progress < 100">{{ progress }}%</span>
+        <span v-else class="imgup__processing"><span class="imgup__spinner" aria-hidden="true" /> processando…</span>
+      </div>
 
       <div v-else class="imgup__actions">
         <button type="button" class="btn" @click="inputRef?.click()">
           {{ modelValue ? 'Trocar' : 'Escolher imagem' }}
         </button>
-        <button v-if="modelValue" type="button" class="btn btn--ghost" @click="clearImage">
+        <button v-if="modelValue" type="button" class="btn btn--ghost" @click="emit('update:modelValue', null)">
           Remover
         </button>
       </div>
@@ -104,6 +106,25 @@ function clearImage() {
 .imgup__progress {
   font-size: 13px;
   color: var(--amber);
+}
+
+.imgup__processing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.imgup__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--amber-soft);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: imgspin 0.7s linear infinite;
+}
+
+@keyframes imgspin {
+  to { transform: rotate(360deg); }
 }
 
 .imgup__hint {
