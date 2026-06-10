@@ -15,6 +15,18 @@ const form = ref<EpisodeFormModel>({
   videoPending: true
 })
 
+// Podcast = feed do PowerPress; BTCast = programa principal
+const DEFAULT_CATEGORY_NAMES = ['podcast', 'btcast']
+
+const { data: taxonomies } = await useFetch('/api/taxonomies', { lazy: true })
+
+watch(taxonomies, (t) => {
+  if (!t || form.value.categories.length) return
+  form.value.categories = t.categories
+    .filter(c => DEFAULT_CATEGORY_NAMES.includes(c.name.toLowerCase()))
+    .map(c => c.id)
+}, { immediate: true })
+
 const saving = ref(false)
 const errorMessage = ref<string | null>(null)
 
@@ -26,7 +38,7 @@ async function save() {
       method: 'POST',
       body: {
         title: form.value.title,
-        content: form.value.content,
+        content: editableToHtml(form.value.content),
         status: form.value.status,
         date: form.value.status === 'future' ? form.value.date : undefined,
         categories: form.value.categories,

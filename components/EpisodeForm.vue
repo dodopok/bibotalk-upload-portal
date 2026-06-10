@@ -91,7 +91,7 @@ const canSubmit = computed(() =>
           class="textarea"
           :value="form.content"
           rows="10"
-          placeholder="Descrição do episódio (aceita HTML, vai pro corpo do post e pro feed)"
+          placeholder="Descrição do episódio. Pode colar texto com URLs soltas — elas viram links clicáveis automaticamente ao salvar."
           @input="patch('content', ($event.target as HTMLTextAreaElement).value)"
         />
       </section>

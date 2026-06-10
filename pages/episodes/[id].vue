@@ -13,7 +13,7 @@ const form = ref<EpisodeFormModel>(toFormModel(episode.value))
 function toFormModel(ep: any): EpisodeFormModel {
   return {
     title: ep?.title ?? '',
-    content: ep?.content ?? '',
+    content: htmlToEditable(ep?.content ?? ''),
     status: (ep?.status === 'pending' ? 'draft' : ep?.status) ?? 'draft',
     date: ep?.date ? String(ep.date).slice(0, 16) : '',
     categories: (ep?.categories ?? []).map((c: { id: number }) => c.id),
@@ -40,7 +40,7 @@ async function save() {
       method: 'PUT',
       body: {
         title: form.value.title,
-        content: form.value.content,
+        content: editableToHtml(form.value.content),
         status: form.value.status,
         date: form.value.status === 'future' ? form.value.date : undefined,
         categories: form.value.categories,
