@@ -170,7 +170,7 @@ function onDrop(e: DragEvent) {
 
 .imgup__error {
   font-size: 13px;
-  color: var(--rec);
+  color: var(--danger);
   margin: 8px 0 0;
 }
 </style>

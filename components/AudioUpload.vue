@@ -179,7 +179,7 @@ function updateDuration(e: Event) {
 .drop__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--rec), var(--amber));
+  background: linear-gradient(90deg, var(--brand), var(--amber));
   transition: width 0.2s ease;
 }
 
@@ -200,7 +200,7 @@ function updateDuration(e: Event) {
 .drop__error {
   margin: 8px 0 0;
   font-size: 13px;
-  color: var(--rec);
+  color: var(--danger);
 }
 
 .done {

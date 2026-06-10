@@ -126,7 +126,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .tags__x:hover {
-  color: var(--rec);
+  color: var(--danger);
 }
 
 .tags__input {

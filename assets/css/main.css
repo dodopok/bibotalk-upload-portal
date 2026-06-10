@@ -16,8 +16,10 @@
   --text-dim: #9a9183;
   --text-faint: #6b6356;
 
-  --rec: #ff3d2e;
-  --rec-soft: rgba(255, 61, 46, 0.12);
+  --brand: #ed7506;
+  --brand-soft: rgba(237, 117, 6, 0.14);
+  --danger: #ff4438;
+  --danger-soft: rgba(255, 68, 56, 0.12);
   --amber: #ffb347;
   --amber-soft: rgba(255, 179, 71, 0.12);
   --ok: #58c98f;
@@ -48,7 +50,7 @@ body {
   color: var(--text);
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(255, 179, 71, 0.05), transparent 60%),
-    radial-gradient(900px 500px at -10% 100%, rgba(255, 61, 46, 0.04), transparent 60%),
+    radial-gradient(900px 500px at -10% 100%, rgba(237, 117, 6, 0.05), transparent 60%),
     var(--bg);
   background-attachment: fixed;
   min-height: 100vh;
@@ -87,7 +89,7 @@ button {
 }
 
 ::selection {
-  background: var(--rec);
+  background: var(--brand);
   color: #fff;
 }
 
@@ -125,15 +127,15 @@ button {
   transform: none;
 }
 
-.btn--rec {
-  background: var(--rec);
-  border-color: var(--rec);
+.btn--brand {
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
 }
 
-.btn--rec:hover {
-  background: #ff5546;
-  border-color: #ff5546;
+.btn--brand:hover {
+  background: #ff8a1f;
+  border-color: #ff8a1f;
 }
 
 .btn--ghost {

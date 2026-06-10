@@ -102,7 +102,7 @@ function onKeydown(e: KeyboardEvent) {
 
 .dlg__title {
   font-size: 22px;
-  color: var(--rec);
+  color: var(--danger);
 }
 
 .dlg__text {
@@ -156,8 +156,8 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .dlg__danger {
-  background: var(--rec);
-  border-color: var(--rec);
+  background: var(--danger);
+  border-color: var(--danger);
   color: #fff;
 }
 

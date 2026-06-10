@@ -23,7 +23,9 @@ const errorMessage = computed(() => {
       <div class="login__onair mono">
         <span class="login__dot" /> ON AIR
       </div>
-      <h1 class="login__brand">BIBOTALK</h1>
+      <h1 class="login__brand">
+        <img src="/logo.png" alt="Bibotalk" class="login__logo">
+      </h1>
       <p class="login__sub">Portal de episódios</p>
 
       <p v-if="errorMessage" class="login__error">{{ errorMessage }}</p>
@@ -72,9 +74,9 @@ const errorMessage = computed(() => {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3em;
-  color: var(--rec);
-  border: 1px solid rgba(255, 61, 46, 0.4);
-  background: var(--rec-soft);
+  color: var(--brand);
+  border: 1px solid rgba(237, 117, 6, 0.45);
+  background: var(--brand-soft);
   border-radius: 999px;
   padding: 6px 14px 6px 11px;
   margin-bottom: 28px;
@@ -84,16 +86,19 @@ const errorMessage = computed(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--rec);
-  box-shadow: 0 0 10px var(--rec);
+  background: var(--brand);
+  box-shadow: 0 0 10px var(--brand);
   animation: blink 1.6s ease-in-out infinite;
 }
 
 .login__brand {
-  font-size: clamp(40px, 9vw, 52px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  margin: 0;
   line-height: 1;
+}
+
+.login__logo {
+  width: min(177px, 70%);
+  height: auto;
 }
 
 .login__sub {
@@ -103,8 +108,8 @@ const errorMessage = computed(() => {
 }
 
 .login__error {
-  background: var(--rec-soft);
-  border: 1px solid rgba(255, 61, 46, 0.35);
+  background: var(--danger-soft);
+  border: 1px solid rgba(255, 68, 56, 0.35);
   color: #ffb3ac;
   border-radius: var(--radius);
   padding: 10px 14px;
@@ -143,7 +148,7 @@ const errorMessage = computed(() => {
 .login__wave span {
   width: 5px;
   border-radius: 3px 3px 0 0;
-  background: linear-gradient(to top, var(--rec), var(--amber));
+  background: linear-gradient(to top, var(--brand), var(--amber));
   height: 12%;
   animation: vu 2.6s ease-in-out infinite;
   animation-delay: calc(var(--i) * -0.17s);

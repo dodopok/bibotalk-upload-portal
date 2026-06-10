@@ -240,7 +240,7 @@ const canSubmit = computed(() =>
         </p>
       </section>
 
-      <button class="btn btn--rec ef__submit" type="submit" :disabled="!canSubmit">
+      <button class="btn btn--brand ef__submit" type="submit" :disabled="!canSubmit">
         <span v-if="saving || uploadsBusy" class="ef__spinner" aria-hidden="true" />
         {{ saving ? 'Salvando…' : uploadsBusy ? 'Aguarde os uploads…' : submitLabel }}
       </button>
@@ -339,7 +339,7 @@ const canSubmit = computed(() =>
 }
 
 .ef__video input {
-  accent-color: var(--rec);
+  accent-color: var(--brand);
   width: 16px;
   height: 16px;
 }

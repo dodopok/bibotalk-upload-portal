@@ -88,7 +88,7 @@ function refDebounced<T>(source: Ref<T>, ms: number) {
         <h1 class="toolbar__title">Episódios</h1>
         <p class="toolbar__count mono">{{ data?.total ?? '…' }} no total</p>
       </div>
-      <NuxtLink to="/episodes/new" class="btn btn--rec">
+      <NuxtLink to="/episodes/new" class="btn btn--brand">
         <span class="toolbar__plus" aria-hidden="true">+</span> Novo episódio
       </NuxtLink>
     </div>
@@ -279,9 +279,9 @@ function refDebounced<T>(source: Ref<T>, ms: number) {
 }
 
 .controls__filter--on {
-  background: var(--rec-soft);
-  border-color: var(--rec);
-  color: var(--rec);
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 .state {
@@ -292,7 +292,7 @@ function refDebounced<T>(source: Ref<T>, ms: number) {
 }
 
 .state--error {
-  color: var(--rec);
+  color: var(--danger);
   display: flex;
   flex-direction: column;
   gap: 16px;

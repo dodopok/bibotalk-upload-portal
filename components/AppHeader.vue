@@ -10,8 +10,7 @@ async function logout() {
 <template>
   <header class="hdr">
     <NuxtLink to="/" class="hdr__brand">
-      <span class="hdr__dot" aria-hidden="true" />
-      <span class="hdr__name">BIBOTALK</span>
+      <img src="/logo.png" alt="Bibotalk" class="hdr__logo">
       <span class="hdr__tag mono">portal</span>
     </NuxtLink>
 
@@ -41,19 +40,10 @@ async function logout() {
   text-decoration: none;
 }
 
-.hdr__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--rec);
-  box-shadow: 0 0 12px var(--rec);
-}
-
-.hdr__name {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 19px;
-  letter-spacing: -0.02em;
+.hdr__logo {
+  height: 24px;
+  width: auto;
+  display: block;
 }
 
 .hdr__tag {

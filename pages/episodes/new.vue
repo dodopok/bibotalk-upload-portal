@@ -119,8 +119,8 @@ async function save() {
 }
 
 .error {
-  background: var(--rec-soft);
-  border: 1px solid rgba(255, 61, 46, 0.35);
+  background: var(--danger-soft);
+  border: 1px solid rgba(255, 68, 56, 0.35);
   color: #ffb3ac;
   border-radius: var(--radius);
   padding: 12px 16px;
