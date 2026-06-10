@@ -1,5 +1,15 @@
 <script setup lang="ts">
 const config = useRuntimeConfig()
+const route = useRoute()
+
+const deletedNotice = ref(
+  route.query.deleted
+    ? {
+        title: String(route.query.deleted),
+        ftpFailed: route.query.ftp === 'failed'
+      }
+    : null
+)
 
 const search = ref('')
 const statusFilter = ref<'all' | 'publish' | 'future' | 'draft' | 'video'>('all')
@@ -61,6 +71,17 @@ function refDebounced<T>(source: Ref<T>, ms: number) {
 <template>
   <main class="page">
     <AppHeader />
+
+    <div v-if="deletedNotice" class="deleted rise" :class="{ 'deleted--warn': deletedNotice.ftpFailed }">
+      <p class="deleted__text">
+        <strong>“{{ deletedNotice.title }}”</strong> foi pra lixeira do WordPress.
+        <template v-if="deletedNotice.ftpFailed">
+          Mas <strong>não consegui apagar o mp3 do FTP</strong> — remova manualmente se precisar.
+        </template>
+        <template v-else>O mp3 foi removido do FTP.</template>
+      </p>
+      <button type="button" class="btn btn--ghost deleted__close" @click="deletedNotice = null">✕</button>
+    </div>
 
     <div class="toolbar rise">
       <div>
@@ -160,6 +181,39 @@ function refDebounced<T>(source: Ref<T>, ms: number) {
   max-width: 980px;
   margin: 0 auto;
   padding: 0 24px 80px;
+}
+
+.deleted {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--ok-soft);
+  border: 1px solid rgba(88, 201, 143, 0.35);
+  border-radius: var(--radius);
+  padding: 10px 10px 10px 16px;
+  margin-bottom: 20px;
+}
+
+.deleted--warn {
+  background: var(--amber-soft);
+  border-color: rgba(255, 179, 71, 0.4);
+}
+
+.deleted__text {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-dim);
+}
+
+.deleted__text strong {
+  color: var(--text);
+}
+
+.deleted__close {
+  padding: 4px 9px;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .toolbar {

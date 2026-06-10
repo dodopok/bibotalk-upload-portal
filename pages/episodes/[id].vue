@@ -31,6 +31,27 @@ const errorMessage = ref<string | null>(null)
 const savedAt = ref<Date | null>(null)
 const justCreated = ref(route.query.created === '1')
 
+const deleteOpen = ref(false)
+const deleting = ref(false)
+
+async function destroy() {
+  deleting.value = true
+  errorMessage.value = null
+  try {
+    const result = await $fetch<{ trashed: boolean, ftp: string, title: string }>(`/api/episodes/${id}`, {
+      method: 'DELETE'
+    })
+    await navigateTo({ path: '/', query: { deleted: result.title, ftp: result.ftp } })
+  } catch (e: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = e as any
+    errorMessage.value = err?.data?.statusMessage || err?.message || 'Erro ao excluir.'
+    deleteOpen.value = false
+  } finally {
+    deleting.value = false
+  }
+}
+
 async function save() {
   saving.value = true
   errorMessage.value = null
@@ -96,6 +117,9 @@ async function save() {
             >
               Subir vídeo no Spotify ↗
             </a>
+            <button type="button" class="btn btn--ghost head__delete" @click="deleteOpen = true">
+              Excluir
+            </button>
           </div>
         </div>
       </div>
@@ -113,6 +137,14 @@ async function save() {
         :saving="saving"
         submit-label="Salvar alterações"
         @submit="save"
+      />
+
+      <DeleteEpisodeModal
+        :open="deleteOpen"
+        :title="form.title"
+        :deleting="deleting"
+        @confirm="destroy"
+        @cancel="deleteOpen = false"
       />
     </template>
   </main>
@@ -171,6 +203,16 @@ async function save() {
 .head__spotify {
   color: var(--ok);
   border-color: rgba(88, 201, 143, 0.4);
+}
+
+.head__delete {
+  font-size: 13px;
+  padding: 8px 13px;
+  color: var(--rec);
+}
+
+.head__delete:hover {
+  background: var(--rec-soft);
 }
 
 .notice {
