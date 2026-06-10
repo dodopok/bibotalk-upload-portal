@@ -22,7 +22,8 @@ function toFormModel(ep: any): EpisodeFormModel {
     featuredImage: ep?.featuredImage ?? null,
     enclosure: ep?.enclosure ?? null,
     artworkUrl: ep?.artwork ?? null,
-    videoPending: ep?.videoPending ?? false
+    videoPending: ep?.videoPending ?? false,
+    videoUrl: ep?.videoUrl ?? ''
   }
 }
 
@@ -69,7 +70,8 @@ async function save() {
         featuredMediaId: form.value.featuredMediaId,
         enclosure: form.value.enclosure,
         artworkUrl: form.value.artworkUrl,
-        videoPending: form.value.videoPending
+        videoPending: form.value.videoPending,
+        videoUrl: form.value.videoUrl
       }
     })
     form.value = toFormModel(updated)

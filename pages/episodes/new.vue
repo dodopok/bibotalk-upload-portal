@@ -19,7 +19,8 @@ const form = ref<EpisodeFormModel>({
   featuredImage: null,
   enclosure: null,
   artworkUrl: null,
-  videoPending: true
+  videoPending: true,
+  videoUrl: ''
 })
 
 // Podcast = feed do PowerPress; BTCast = programa principal
@@ -53,7 +54,8 @@ async function save() {
         featuredMediaId: form.value.featuredMediaId,
         enclosure: form.value.enclosure,
         artworkUrl: form.value.artworkUrl,
-        videoPending: form.value.videoPending
+        videoPending: form.value.videoPending,
+        videoUrl: form.value.videoUrl
       }
     })
     await navigateTo(`/episodes/${created.id}?created=1`)

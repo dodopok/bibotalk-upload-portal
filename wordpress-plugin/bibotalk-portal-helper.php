@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Bibotalk Portal Helper
- * Description: Expõe o enclosure/artwork do PowerPress e o status de "vídeo pendente" na REST API, para uso do portal de upload do Bibotalk.
- * Version: 1.0.0
+ * Description: Expõe o enclosure/artwork do PowerPress, o status de "vídeo pendente" e a URL do vídeo na REST API, para uso do portal de upload do Bibotalk.
+ * Version: 1.1.0
  * Author: Bibotalk
  *
  * Instalação: copie este arquivo para wp-content/plugins/ (ou crie a pasta
@@ -107,6 +107,18 @@ add_action('init', function () {
         'type'          => 'boolean',
         'default'       => false,
         'auth_callback' => function () {
+            return current_user_can('edit_posts');
+        },
+    ));
+
+    // URL de download do vídeo (Drive/WeTransfer etc.) pra quem for subir no Spotify
+    register_post_meta('post', 'bibotalk_video_url', array(
+        'show_in_rest'      => true,
+        'single'            => true,
+        'type'              => 'string',
+        'default'           => '',
+        'sanitize_callback' => 'esc_url_raw',
+        'auth_callback'     => function () {
             return current_user_can('edit_posts');
         },
     ));

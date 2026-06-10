@@ -13,6 +13,7 @@ export interface EpisodeFormModel {
   enclosure: EnclosureValue | null
   artworkUrl: string | null
   videoPending: boolean
+  videoUrl: string
 }
 
 const props = defineProps<{
@@ -72,6 +73,14 @@ function toggleCategory(id: number) {
       ? form.value.categories.filter(c => c !== id)
       : [...form.value.categories, id]
   })
+}
+
+const videoUrlCopied = ref(false)
+async function copyVideoUrl() {
+  if (!form.value.videoUrl) return
+  await navigator.clipboard.writeText(form.value.videoUrl)
+  videoUrlCopied.value = true
+  setTimeout(() => (videoUrlCopied.value = false), 1500)
 }
 
 const canSubmit = computed(() =>
@@ -203,6 +212,31 @@ const canSubmit = computed(() =>
         </label>
         <p class="ef__video-hint">
           Marque para lembrar de subir o vídeo no Spotify for Creators depois que o episódio entrar no feed.
+          Quando o vídeo estiver no ar, desmarque e salve.
+        </p>
+
+        <label class="label ef__gap" for="ep-video-url">URL de download do vídeo</label>
+        <div class="ef__video-url">
+          <input
+            id="ep-video-url"
+            class="input"
+            type="url"
+            :value="form.videoUrl"
+            placeholder="https://drive.google.com/…"
+            @input="patch({ videoUrl: ($event.target as HTMLInputElement).value })"
+          >
+          <button
+            v-if="form.videoUrl"
+            type="button"
+            class="btn ef__video-copy mono"
+            :title="videoUrlCopied ? 'Copiado!' : 'Copiar URL'"
+            @click="copyVideoUrl"
+          >
+            {{ videoUrlCopied ? '✓' : '⧉' }}
+          </button>
+        </div>
+        <p class="ef__video-hint">
+          Link de onde baixar o vídeo (Drive, WeTransfer…) pra quem for subir no Spotify.
         </p>
       </section>
 
@@ -315,6 +349,17 @@ const canSubmit = computed(() =>
   font-size: 12.5px;
   color: var(--text-faint);
   line-height: 1.5;
+}
+
+.ef__video-url {
+  display: flex;
+  gap: 8px;
+}
+
+.ef__video-copy {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 14px;
 }
 
 .ef__submit {

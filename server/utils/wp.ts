@@ -30,6 +30,7 @@ export interface EpisodePayload {
   } | null
   artworkUrl?: string
   videoPending: boolean
+  videoUrl?: string
 }
 
 function wpConfig() {
@@ -72,6 +73,7 @@ export interface EpisodeSummary {
   enclosureUrl: string | null
   duration: string | null
   videoPending: boolean
+  videoUrl: string
   categories: { id: number, name: string }[]
 }
 
@@ -92,6 +94,7 @@ export function mapEpisodeSummary(post: any): EpisodeSummary {
     enclosureUrl: pp?.url || null,
     duration: pp?.duration || null,
     videoPending: Boolean(post.meta?.bibotalk_video_pending),
+    videoUrl: (post.meta?.bibotalk_video_url as string) || '',
     categories: terms.filter(t => t.taxonomy === 'category').map(t => ({ id: t.id, name: t.name }))
   }
 }
@@ -150,7 +153,10 @@ export async function buildPostBody(payload: EpisodePayload) {
     status: payload.status,
     categories: payload.categories,
     tags: await ensureTagIds(payload.tagNames ?? []),
-    meta: { bibotalk_video_pending: payload.videoPending }
+    meta: {
+      bibotalk_video_pending: payload.videoPending,
+      bibotalk_video_url: payload.videoUrl ?? ''
+    }
   }
   if (payload.date) body.date = payload.date
   if (payload.featuredMediaId != null) body.featured_media = payload.featuredMediaId
