@@ -50,7 +50,12 @@ export function wpFetch<T>(path: string, options: Parameters<typeof $fetch.raw>[
   const { base, auth } = wpConfig()
   return $fetch.raw<T>(`${base}/wp-json${path}`, {
     ...options,
-    headers: { Authorization: auth, ...(options.headers as Record<string, string> | undefined) }
+    headers: {
+      Authorization: auth,
+      // Cloudflare do site bloqueia clients sem User-Agent identificável (erro 1010)
+      'User-Agent': 'BibotalkPortal/1.0',
+      ...(options.headers as Record<string, string> | undefined)
+    }
   })
 }
 
