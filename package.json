@@ -1,0 +1,20 @@
+{
+  "name": "bibotalk-upload-portal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "basic-ftp": "^6.0.1",
+    "music-metadata": "^11.13.0",
+    "nuxt": "^3.21.8",
+    "nuxt-auth-utils": "^0.5.29",
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0"
+  }
+}
