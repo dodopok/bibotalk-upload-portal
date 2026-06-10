@@ -15,15 +15,18 @@ const emit = defineEmits<{
 }>()
 
 const inputRef = ref<HTMLInputElement>()
+const dragging = ref(false)
 const uploading = ref(false)
 const progress = ref(0)
 const error = ref<string | null>(null)
 
 watch(uploading, b => emit('busy', b))
 
-async function onPick(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
+async function upload(file: File) {
+  if (!file.type.startsWith('image/')) {
+    error.value = 'Envie um arquivo de imagem.'
+    return
+  }
   error.value = null
   uploading.value = true
   progress.value = 0
@@ -41,13 +44,31 @@ async function onPick(e: Event) {
     if (inputRef.value) inputRef.value.value = ''
   }
 }
+
+function onPick(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) upload(file)
+}
+
+function onDrop(e: DragEvent) {
+  dragging.value = false
+  if (uploading.value) return
+  const file = e.dataTransfer?.files?.[0]
+  if (file) upload(file)
+}
 </script>
 
 <template>
   <div class="imgup">
     <span class="label">{{ label }}</span>
 
-    <div class="imgup__box" :class="{ 'imgup__box--filled': modelValue }">
+    <div
+      class="imgup__box"
+      :class="{ 'imgup__box--filled': modelValue, 'imgup__box--drag': dragging }"
+      @dragover.prevent="dragging = true"
+      @dragleave="dragging = false"
+      @drop.prevent="onDrop"
+    >
       <img v-if="modelValue && !uploading" :src="modelValue" alt="" class="imgup__preview">
 
       <div v-if="uploading" class="imgup__progress mono">
@@ -63,6 +84,8 @@ async function onPick(e: Event) {
           Remover
         </button>
       </div>
+
+      <p v-if="!modelValue && !uploading" class="imgup__drop-hint mono">ou arraste a imagem aqui</p>
     </div>
 
     <p v-if="hint" class="imgup__hint">{{ hint }}</p>
@@ -89,6 +112,18 @@ async function onPick(e: Event) {
 
 .imgup__box--filled {
   border-style: solid;
+}
+
+.imgup__box--drag {
+  border-color: var(--amber);
+  background: var(--amber-soft);
+}
+
+.imgup__drop-hint {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
 }
 
 .imgup__preview {
