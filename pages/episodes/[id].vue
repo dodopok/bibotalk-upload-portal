@@ -5,9 +5,18 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const id = Number(route.params.id)
 
-const { data: episode, error: loadError } = await useFetch(`/api/episodes/${id}`)
+// lazy: navega na hora e mostra o skeleton enquanto o WordPress responde
+const { data: episode, error: loadError, pending } = useFetch(`/api/episodes/${id}`, { lazy: true })
 
 const form = ref<EpisodeFormModel>(toFormModel(episode.value))
+const loaded = ref(Boolean(episode.value))
+
+watch(episode, (ep) => {
+  if (ep && !loaded.value) {
+    form.value = toFormModel(ep)
+    loaded.value = true
+  }
+}, { immediate: true })
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toFormModel(ep: any): EpisodeFormModel {
@@ -93,6 +102,29 @@ async function save() {
     <div v-if="loadError" class="error rise">
       Episódio não encontrado ou o WordPress não respondeu: {{ loadError.statusMessage || loadError.message }}
     </div>
+
+    <template v-else-if="pending && !loaded">
+      <div class="head rise">
+        <NuxtLink to="/" class="head__back mono">← episódios</NuxtLink>
+        <div class="head__row">
+          <h1 class="head__title">Editar episódio</h1>
+          <span class="skel skel--chip" />
+        </div>
+      </div>
+      <div class="skel-grid" aria-label="Carregando episódio…" aria-busy="true">
+        <div class="skel-col">
+          <div class="skel skel--card" style="height: 280px" />
+          <div class="skel skel--card" style="height: 140px; animation-delay: 0.1s" />
+          <div class="skel skel--card" style="height: 220px; animation-delay: 0.2s" />
+        </div>
+        <div class="skel-col">
+          <div class="skel skel--card" style="height: 110px; animation-delay: 0.1s" />
+          <div class="skel skel--card" style="height: 180px; animation-delay: 0.2s" />
+          <div class="skel skel--card" style="height: 200px; animation-delay: 0.3s" />
+        </div>
+      </div>
+      <p class="skel-hint mono">carregando do WordPress…</p>
+    </template>
 
     <template v-else>
       <div class="head rise">
@@ -228,6 +260,61 @@ async function save() {
   background: var(--ok-soft);
   border: 1px solid rgba(88, 201, 143, 0.35);
   color: var(--ok);
+}
+
+.skel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(237, 117, 6, 0.06) 50%, transparent 70%);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.skel--chip {
+  width: 90px;
+  height: 26px;
+  border-radius: 999px;
+}
+
+.skel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.skel-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.skel-hint {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-top: 24px;
+}
+
+@media (max-width: 900px) {
+  .skel-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .notice--error,
