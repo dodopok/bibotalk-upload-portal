@@ -101,7 +101,7 @@ const canSubmit = computed(() =>
           class="input ef__title"
           :value="form.title"
           type="text"
-          placeholder="BTCast 000 — Nome do episódio"
+          placeholder="Nome do episódio - BTCast 000"
           required
           @input="patch({ title: ($event.target as HTMLInputElement).value })"
         >
