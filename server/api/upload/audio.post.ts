@@ -1,7 +1,7 @@
 import { PassThrough } from 'node:stream'
 import Busboy from 'busboy'
 import { Client } from 'basic-ftp'
-import { parseBuffer } from 'music-metadata'
+import { parseStream } from 'music-metadata'
 
 function sanitizeFilename(name: string) {
   const base = name.replace(/\.[^.]+$/, '')
@@ -29,10 +29,6 @@ interface AudioUploadResult {
   mimeType: string
   duration: string
 }
-
-// Quanto guardamos do começo do mp3 pra extrair duração via music-metadata.
-// Mp3 com Xing/LAME/Info header (típico em podcast) resolve com pouco.
-const META_SNIFF_BYTES = 512 * 1024
 
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
@@ -118,45 +114,58 @@ export default defineEventHandler(async (event) => {
         }
 
         const ftpStream = new PassThrough({ highWaterMark: 1024 * 1024 })
-        const metaChunks: Buffer[] = []
-        let metaBytes = 0
+        const metaStream = new PassThrough({ highWaterMark: 1024 * 1024 })
         let fileSize = 0
+        let metaDone = false
 
         fileStream.on('data', (chunk: Buffer) => {
           fileSize += chunk.length
-          if (metaBytes < META_SNIFF_BYTES) {
-            metaChunks.push(chunk)
-            metaBytes += chunk.length
-          }
           if (!ftpStream.write(chunk)) fileStream.pause()
+          if (!metaDone && !metaStream.destroyed) {
+            metaStream.write(chunk)
+          }
         })
         ftpStream.on('drain', () => fileStream.resume())
-        fileStream.on('end', () => ftpStream.end())
+        fileStream.on('end', () => {
+          ftpStream.end()
+          if (!metaStream.writableEnded && !metaStream.destroyed) metaStream.end()
+        })
         fileStream.on('error', (err) => {
           ftpStream.destroy(err)
+          metaStream.destroy(err)
           finish(err)
         })
+
+        // music-metadata consome em paralelo: pra mp3 com Xing/LAME resolve nos
+        // primeiros frames; pra CBR sem header, varre o arquivo todo.
+        let durationSeconds = 0
+        const metaPromise = parseStream(metaStream, { mimeType: 'audio/mpeg' }, { duration: true })
+          .then((meta) => {
+            durationSeconds = meta.format.duration ?? 0
+          })
+          .catch(() => {
+            // mp3 sem header de duração legível: campo fica editável no form
+          })
+          .finally(() => {
+            metaDone = true
+            if (!metaStream.destroyed) metaStream.destroy()
+          })
 
         try {
           await client.uploadFrom(ftpStream, filename)
         } catch (error: unknown) {
+          metaStream.destroy()
           return finish(createError({
             statusCode: 502,
             statusMessage: `Falha no upload FTP: ${(error as Error).message}`
           }))
         }
 
-        let durationSeconds = 0
-        try {
-          const meta = await parseBuffer(
-            Buffer.concat(metaChunks, metaBytes),
-            { mimeType: 'audio/mpeg' },
-            { duration: true }
-          )
-          durationSeconds = meta.format.duration ?? 0
-        } catch {
-          // mp3 sem header de duração legível: campo fica editável no form
-        }
+        // Espera o parse de duração terminar (com teto de 10s caso pareie estranho)
+        await Promise.race([
+          metaPromise,
+          new Promise<void>(r => setTimeout(r, 10_000))
+        ])
 
         finish(null, {
           url: `${config.mp3PublicBaseUrl.replace(/\/$/, '')}/${filename}`,
