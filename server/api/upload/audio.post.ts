@@ -1,4 +1,5 @@
-import { Readable } from 'node:stream'
+import { PassThrough } from 'node:stream'
+import Busboy from 'busboy'
 import { Client } from 'basic-ftp'
 import { parseBuffer } from 'music-metadata'
 
@@ -7,7 +8,7 @@ function sanitizeFilename(name: string) {
   const clean = base
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
   return `${clean || 'episodio'}.mp3`
@@ -21,6 +22,18 @@ function formatDuration(totalSeconds: number) {
   return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':')
 }
 
+interface AudioUploadResult {
+  url: string
+  filename: string
+  fileSize: number
+  mimeType: string
+  duration: string
+}
+
+// Quanto guardamos do começo do mp3 pra extrair duração via music-metadata.
+// Mp3 com Xing/LAME/Info header (típico em podcast) resolve com pouco.
+const META_SNIFF_BYTES = 512 * 1024
+
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 
@@ -32,23 +45,20 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const form = await readMultipartFormData(event)
-  const file = form?.find(f => f.name === 'file' && f.filename)
-  if (!file?.data?.length) {
-    throw createError({ statusCode: 400, statusMessage: 'Nenhum arquivo enviado.' })
-  }
-
-  // Duração do mp3 (vai pro enclosure do PowerPress)
-  let durationSeconds = 0
-  try {
-    const meta = await parseBuffer(file.data, { mimeType: 'audio/mpeg' }, { duration: true })
-    durationSeconds = meta.format.duration ?? 0
-  } catch {
-    // arquivo sem header legível: segue sem duração, o campo fica editável no form
+  const req = event.node.req
+  const contentType = req.headers['content-type']
+  if (!contentType?.startsWith('multipart/form-data')) {
+    throw createError({ statusCode: 400, statusMessage: 'Esperado multipart/form-data.' })
   }
 
   const client = new Client(60_000)
-  let filename = sanitizeFilename(file.filename!)
+  let clientClosed = false
+  const closeClient = () => {
+    if (clientClosed) return
+    clientClosed = true
+    try { client.close() } catch { /* noop */ }
+  }
+
   try {
     await client.access({
       host: config.ftp.host,
@@ -57,32 +67,119 @@ export default defineEventHandler(async (event) => {
       password: config.ftp.password,
       secure: config.ftp.secure === 'true'
     })
-
-    const dir = config.ftp.remoteDir || '/'
-    await client.ensureDir(dir)
-
-    // evita sobrescrever episódio existente com o mesmo nome
-    const existing = await client.list()
-    if (existing.some(f => f.name === filename)) {
-      const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
-      filename = filename.replace(/\.mp3$/, `-${stamp}.mp3`)
-    }
-
-    await client.uploadFrom(Readable.from(file.data), filename)
+    await client.ensureDir(config.ftp.remoteDir || '/')
   } catch (error: unknown) {
+    closeClient()
     throw createError({
       statusCode: 502,
-      statusMessage: `Falha no upload FTP: ${(error as Error).message}`
+      statusMessage: `Falha ao conectar no FTP: ${(error as Error).message}`
     })
-  } finally {
-    client.close()
   }
 
-  return {
-    url: `${config.mp3PublicBaseUrl.replace(/\/$/, '')}/${filename}`,
-    filename,
-    fileSize: file.data.length,
-    mimeType: 'audio/mpeg',
-    duration: formatDuration(durationSeconds)
+  try {
+    return await new Promise<AudioUploadResult>((resolve, reject) => {
+      const bb = Busboy({ headers: req.headers, limits: { files: 1, fields: 0 } })
+      let currentFileStream: NodeJS.ReadableStream | null = null
+      let gotFile = false
+      let handled = false
+      const finish = (err: Error | null, value?: AudioUploadResult) => {
+        if (handled) return
+        handled = true
+        if (err) {
+          currentFileStream?.removeAllListeners('data')
+          currentFileStream?.resume?.()
+          reject(err)
+        } else {
+          resolve(value!)
+        }
+      }
+
+      bb.on('file', async (name, fileStream, info) => {
+        currentFileStream = fileStream
+        if (name !== 'file' || !info.filename) {
+          fileStream.resume()
+          return
+        }
+        gotFile = true
+
+        let filename = sanitizeFilename(info.filename)
+        try {
+          const existing = await client.list()
+          if (existing.some(f => f.name === filename)) {
+            const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
+            filename = filename.replace(/\.mp3$/, `-${stamp}.mp3`)
+          }
+        } catch (error: unknown) {
+          fileStream.resume()
+          return finish(createError({
+            statusCode: 502,
+            statusMessage: `Falha ao listar diretório FTP: ${(error as Error).message}`
+          }))
+        }
+
+        const ftpStream = new PassThrough({ highWaterMark: 1024 * 1024 })
+        const metaChunks: Buffer[] = []
+        let metaBytes = 0
+        let fileSize = 0
+
+        fileStream.on('data', (chunk: Buffer) => {
+          fileSize += chunk.length
+          if (metaBytes < META_SNIFF_BYTES) {
+            metaChunks.push(chunk)
+            metaBytes += chunk.length
+          }
+          if (!ftpStream.write(chunk)) fileStream.pause()
+        })
+        ftpStream.on('drain', () => fileStream.resume())
+        fileStream.on('end', () => ftpStream.end())
+        fileStream.on('error', (err) => {
+          ftpStream.destroy(err)
+          finish(err)
+        })
+
+        try {
+          await client.uploadFrom(ftpStream, filename)
+        } catch (error: unknown) {
+          return finish(createError({
+            statusCode: 502,
+            statusMessage: `Falha no upload FTP: ${(error as Error).message}`
+          }))
+        }
+
+        let durationSeconds = 0
+        try {
+          const meta = await parseBuffer(
+            Buffer.concat(metaChunks, metaBytes),
+            { mimeType: 'audio/mpeg' },
+            { duration: true }
+          )
+          durationSeconds = meta.format.duration ?? 0
+        } catch {
+          // mp3 sem header de duração legível: campo fica editável no form
+        }
+
+        finish(null, {
+          url: `${config.mp3PublicBaseUrl.replace(/\/$/, '')}/${filename}`,
+          filename,
+          fileSize,
+          mimeType: 'audio/mpeg',
+          duration: formatDuration(durationSeconds)
+        })
+      })
+
+      bb.on('error', err => finish(err as Error))
+      bb.on('finish', () => {
+        if (!gotFile) {
+          finish(createError({ statusCode: 400, statusMessage: 'Nenhum arquivo enviado.' }))
+        }
+      })
+
+      req.on('aborted', () => finish(createError({ statusCode: 499, statusMessage: 'Upload cancelado pelo cliente.' })))
+      req.on('error', err => finish(err))
+
+      req.pipe(bb)
+    })
+  } finally {
+    closeClient()
   }
 })
